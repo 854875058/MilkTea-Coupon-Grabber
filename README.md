@@ -1,79 +1,169 @@
-# MilkTea-Coupon-Grabber 🧋
+<div align="center">
 
-奶茶优惠券自动抢券脚本，支持蜜雪冰城、茶百道等品牌。
+# MilkTea Coupon Grabber
 
-> ⚠️ **声明：本项目仅供学习交流使用，请勿用于商业用途或恶意抢券。相关活动规则以官方为准。**
+**奶茶优惠券自动抢券工具**
 
-## 支持品牌
+*High-concurrency coupon grabber for Chinese milk tea brands with async I/O and reverse-engineered signing*
 
-| 品牌 | 脚本 | 说明 |
-|------|------|------|
-| 蜜雪冰城 | `蜜雪冰城.py` / `mx.py` / `mx1.py` | 口令抢券，支持多账号、代理池、定时抢券 |
-| 茶百道 | `茶百道.py` / `cbd1.py` | 密码抢券，支持异步并发、多账号 |
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python)](https://python.org/)
+[![asyncio](https://img.shields.io/badge/asyncio-Concurrent-FFD43B?logo=python)](https://docs.python.org/3/library/asyncio.html)
+[![JavaScript](https://img.shields.io/badge/JavaScript-Signing-F7DF1E?logo=javascript)](https://developer.mozilla.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 功能特性
+</div>
 
-- **异步高并发**：基于 `asyncio` + `aiohttp`，单账号可发起大量并发请求
-- **多账号支持**：可配置多个账号同时抢券
-- **定时抢券**：支持设置目标时间，精确到毫秒级触发
-- **代理池**：支持接入第三方代理 API，降低被限制风险（蜜雪冰城脚本）
-- **JS 逆向签名**：还原了蜜雪冰城 H5 端的请求签名算法
+---
 
-## 项目结构
+> **Disclaimer**: 本项目仅供学习交流与技术研究使用，请勿用于商业用途或恶意抢券。使用本工具产生的一切后果由使用者自行承担，相关活动规则以官方为准。
+
+## Overview
+
+奶茶品牌优惠券活动往往在开抢瞬间被秒光，手动操作根本抢不到。核心难点在于：**毫秒级定时精度**、**高并发请求能力**、**签名算法逆向**。
+
+本工具通过逆向 H5 端签名算法，结合 Python asyncio 异步并发（单账号 1000+ 并发请求）、服务器时间同步、代理池轮换，实现毫秒级精准抢券。支持蜜雪冰城、茶百道等主流品牌，多账号同时作战。
 
 ```
-├── 蜜雪冰城.py        # 蜜雪冰城 - 简易版抢券脚本
-├── mx.py              # 蜜雪冰城 - 完整版（代理+定时+多账号）
-├── mx1.py             # 蜜雪冰城 - 完整版变体
-├── mx.js              # 蜜雪冰城 - 签名算法 JS
-├── mx1.js             # 蜜雪冰城 - 签名算法 JS（备用）
-├── 茶百道.py           # 茶百道 - 异步并发抢券
-├── cbd1.py            # 茶百道 - 多线程+异步版本
-├── js加密.js          # JS 加密逻辑分析
-├── F3.js              # 前端加密源码
-├── params (1).js      # 请求参数构造逻辑
-├── test.py / test.js  # 测试脚本
-├── token*.txt         # Token 配置文件（示例）
-└── completed_tokens.txt / invalid_tokens.txt  # 运行日志
+┌─────────────────────────────────────────────────────────────┐
+│                   Server Time Sync                           │
+├─────────────────────────────────────────────────────────────┤
+│              Millisecond Precision Timer                      │
+├──────────────┬──────────────────┬────────────────────────────┤
+│  JS Signing  │  Async Request   │  Proxy Pool                │
+│  算法逆向     │  Pool (1000+)    │  IP 轮换                   │
+├──────────────┴──────────────────┴────────────────────────────┤
+│         Multi-Account Token Management                        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 环境依赖
+## Key Features
+
+### Async High Concurrency
+基于 Python asyncio + aiohttp，单账号可发起 1000+ 并发请求。多账号场景下并发数线性叠加，最大化抢券成功率。
+
+### Millisecond Precision Timing
+通过服务器时间同步 + 延迟补偿，在活动开抢的精确毫秒发起请求。避免本地时钟偏差导致的抢券失败。
+
+### JS Signature Reversal
+逆向还原 H5 端签名算法，生成合法请求签名。蜜雪冰城使用 MD5 + 固定盐值，茶百道使用微信小程序 CSESSION 认证。
+
+### Proxy Pool Integration
+集成第三方代理池 API，自动轮换 IP 地址，规避频率限制与 IP 封禁。
+
+### Multi-Account Management
+支持多账号 Token 批量导入，自动追踪已完成/失效 Token，避免重复请求浪费资源。
+
+## Supported Brands
+
+| Brand | Script | Auth | Concurrency | Proxy |
+|-------|--------|------|-------------|-------|
+| 蜜雪冰城 (Mixue) | `蜜雪冰城.py` | MD5 签名 (type__1286) | 1000+ async | - |
+| 蜜雪冰城 (Full) | `mx.py` / `mx1.py` | MD5 签名 + JS Runtime | 1000+ async | Proxy Pool |
+| 茶百道 (ChabaDao) | `茶百道.py` | WeChat CSESSION | 1000+ async | - |
+| 茶百道 (Full) | `cbd1.py` | WeChat CSESSION | Multi-thread + async | - |
+
+## Tech Stack
+
+```
+Python                            JavaScript                       Infrastructure
+─────────────────                 ─────────────────               ─────────────────
+asyncio (Event Loop)              mx.js (Mixue Signing)            Proxy Pool API
+aiohttp (Async HTTP)              mx1.js (Mixue v2)                Token Management
+requests (Sync HTTP)              F3.js (Frontend Crypto)          Server Time Sync
+execjs (JS Runtime)               params.js (Param Build)
+fake_useragent (UA Pool)
+```
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                      Token File (multi-account)                   │
+│                    token.txt / token1.txt / token2.txt             │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ┌─────────────┐    ┌──────────────┐    ┌────────────────────┐   │
+│  │ Server Time │    │  JS Signing  │    │   Proxy Pool       │   │
+│  │ Sync        │    │  Engine      │    │   Rotation         │   │
+│  │ (ms精度)     │    │  (execjs)    │    │   (IP轮换)         │   │
+│  └──────┬──────┘    └──────┬───────┘    └────────┬───────────┘   │
+│         └──────────────────┼──────────────────────┘               │
+│                            │                                       │
+│                   ┌────────▼─────────┐                            │
+│                   │  asyncio         │                            │
+│                   │  Event Loop      │                            │
+│                   │  (1000+ tasks)   │                            │
+│                   └────────┬─────────┘                            │
+│                            │                                       │
+│              ┌─────────────┼─────────────┐                        │
+│              │             │             │                         │
+│         ┌────▼───┐   ┌────▼───┐   ┌────▼───┐                    │
+│         │ Req #1 │   │ Req #2 │   │Req #N  │  ... (concurrent)  │
+│         └────┬───┘   └────┬───┘   └────┬───┘                    │
+│              └─────────────┼─────────────┘                        │
+│                            │                                       │
+│                   ┌────────▼─────────┐                            │
+│                   │  Result Tracker  │                            │
+│                   │  completed/      │                            │
+│                   │  invalid tokens  │                            │
+│                   └──────────────────┘                            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Quick Start
 
 ```bash
-pip install aiohttp requests execjs fake_useragent
-```
+# 1. Clone
+git clone https://github.com/854875058/MilkTea-Coupon-Grabber.git
+cd MilkTea-Coupon-Grabber
 
-蜜雪冰城脚本还需要 Node.js 环境（用于执行 JS 签名）。
+# 2. Install dependencies
+pip install aiohttp requests PyExecJS fake_useragent
 
-## 使用方式
+# 3. Prepare tokens
+# Edit token.txt: one token per line
 
-### 蜜雪冰城
-
-1. 抓包获取小程序的 `Access-Token`
-2. 修改 `蜜雪冰城.py` 中的 `token`、`marketingId`、`round`、`secretword` 等参数
-3. 运行：
-```bash
+# 4. Run (Mixue simple version)
 python 蜜雪冰城.py
-```
 
-### 茶百道
+# 5. Run (Mixue full version with proxy)
+python mx.py
 
-1. 抓包获取小程序的 `CSESSION`
-2. 修改 `茶百道.py` 中的 `cookie`、`idtime`、`password` 等参数
-3. 运行：
-```bash
+# 6. Run (ChabaDao)
 python 茶百道.py
 ```
 
-## 技术要点
+## Project Structure
 
-- 蜜雪冰城 H5 端使用了自定义签名算法（`type__1286` 参数），通过 `execjs` 调用还原后的 JS 代码生成
-- 请求签名基于 MD5，拼接了固定的 salt 值
-- 茶百道使用微信小程序接口，需要有效的 `CSESSION`
+```
+MilkTea-Coupon-Grabber/
+├── 蜜雪冰城.py                # Mixue simple async grabber
+├── mx.py                      # Mixue full version (proxy + timing)
+├── mx1.py                     # Mixue alternative version
+├── 茶百道.py                  # ChabaDao async grabber
+├── cbd1.py                    # ChabaDao multi-thread + async
+├── mx.js                      # Mixue signing algorithm
+├── mx1.js                     # Mixue signing v2
+├── F3.js                      # Frontend encryption analysis
+├── test.py                    # Test harness
+├── token.txt                  # Token list (one per line)
+├── completed_tokens.txt       # Successfully used tokens
+└── invalid_tokens.txt         # Expired/invalid tokens
+```
 
-## 免责声明
+## Usage
 
-本项目仅用于技术学习和研究目的，不鼓励任何违反平台规则的行为。使用本项目造成的任何后果由使用者自行承担。
+| Script | Brand | Features |
+|--------|-------|----------|
+| `python 蜜雪冰城.py` | 蜜雪冰城 | 基础异步抢券 |
+| `python mx.py` | 蜜雪冰城 | 代理池 + 定时 + 多账号 |
+| `python mx1.py` | 蜜雪冰城 | 代理池 + 签名 v2 |
+| `python 茶百道.py` | 茶百道 | 基础异步抢券 |
+| `python cbd1.py` | 茶百道 | 多线程 + 异步混合 |
+
+## Disclaimer
+
+本项目仅供学习交流与安全研究使用。请遵守相关平台的使用条款与法律法规，不得将本工具用于任何商业目的或恶意行为。因使用本工具产生的一切法律责任由使用者自行承担。
 
 ## License
 
